@@ -14,6 +14,12 @@ import {
   deleteDoc, 
   writeBatch 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  signInAnonymously, 
+  onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBEDhorQluZMJbE9KsApQja4MMW_K665CM",
@@ -25,10 +31,38 @@ const firebaseConfig = {
   measurementId: "G-J6HRLGHLC1"
 };
 
-// 初始化 Firebase 與 Firestore
+// 初始化 Firebase、Firestore 與 Auth
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const CARDS_COLLECTION = 'cards';
+const auth = getAuth(app);
+
+let currentUserUID = null;
+
+// 自動驗證身份邏輯
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    currentUserUID = user.uid;
+    console.log("🟢 登入成功！當前使用者 ID:", user.uid);
+  } else {
+    // 檢查是否有儲存管理員帳號密碼
+    const savedEmail = localStorage.getItem('admin_email');
+    const savedPwd = localStorage.getItem('admin_pwd');
+
+    if (savedEmail && savedPwd) {
+      try {
+        await signInWithEmailAndPassword(auth, savedEmail, savedPwd);
+        console.log("🔑 管理員帳號自動登入成功（跨裝置同步中）");
+      } catch (err) {
+        console.warn("⚠️ 自動登入失敗，切換為訪客模式", err);
+        await signInAnonymously(auth);
+      }
+    } else {
+      // 朋友開啟時，自動以匿名訪客登入
+      console.log("👤 訪客開啟，已建立獨立雲端空間");
+      await signInAnonymously(auth);
+    }
+  }
+});
 
 // -------------------------------------------------------------
 // 2. 全局狀態變數
@@ -47,7 +81,6 @@ const subjectMap = {
   reading: { name: '閱讀 Reading', class: 'bg-emerald-500/10 text-emerald-500' },
   speaking: { name: '口語 Speaking', class: 'bg-amber-500/10 text-amber-500' }
 };
-
 // -------------------------------------------------------------
 // 3. Firestore 雲端同步 Helper 函式
 // -------------------------------------------------------------
