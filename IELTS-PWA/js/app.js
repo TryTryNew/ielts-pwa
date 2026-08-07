@@ -89,7 +89,10 @@ const subjectMap = {
 // 從 Firestore 載入所有卡片
 async function fetchCardsFromCloud() {
   try {
-    const querySnapshot = await getDocs(collection(db, CARDS_COLLECTION));
+    // 新的寫法：指向 users/各自的UID/cards
+if (!currentUserUID) return;
+const cardsRef = collection(db, 'users', currentUserUID, 'cards');
+const querySnapshot = await getDocs(cardsRef);
     const cloudCards = [];
     querySnapshot.forEach((docSnap) => {
       cloudCards.push({ id: docSnap.id, ...docSnap.data() });
@@ -122,7 +125,9 @@ async function syncCardToCloud(card) {
 // 刪除雲端單張卡片
 async function deleteCardFromCloud(cardId) {
   try {
-    await deleteDoc(doc(db, CARDS_COLLECTION, String(cardId)));
+   try {
+    await deleteDoc(doc(db, 'users', currentUserUID, 'cards', String(cardId)));
+} catch (err) {
   } catch (err) {
     console.error('⚠️ 從 Firebase 刪除失敗:', err);
   }
