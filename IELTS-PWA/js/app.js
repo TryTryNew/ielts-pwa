@@ -37,6 +37,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+
 // 初始化 Google 登入驗證器
 const googleProvider = new GoogleAuthProvider();
 
@@ -50,6 +51,7 @@ document.getElementById('googleLoginBtn')?.addEventListener('click', async () =>
     alert("登入失敗：" + error.message);
   }
 });
+
 let currentUserUID = null;
 
 // 自動驗證身份邏輯
@@ -57,6 +59,7 @@ onAuthStateChanged(auth, async (user) => {
   if (user) {
     currentUserUID = user.uid;
     console.log("🟢 登入成功！當前使用者 ID:", user.uid);
+    fetchCardsFromCloud(); // 登入後自動加載該使用者的雲端卡片
   } else {
     // 檢查是否有儲存管理員帳號密碼
     const savedEmail = localStorage.getItem('admin_email');
@@ -71,7 +74,7 @@ onAuthStateChanged(auth, async (user) => {
         await signInAnonymously(auth);
       }
     } else {
-      // 朋友開啟時，自動以匿名訪客登入
+      // 訪客開啟時，自動以匿名訪客登入
       console.log("👤 訪客開啟，已建立獨立雲端空間");
       await signInAnonymously(auth);
     }
@@ -81,7 +84,6 @@ onAuthStateChanged(auth, async (user) => {
 // -------------------------------------------------------------
 // 2. 全局狀態變數
 // -------------------------------------------------------------
-const CARDS_COLLECTION = 'cards';
 let cards = getCards();
 let currentReviewList = [];
 let reviewIndex = 0;
@@ -96,6 +98,7 @@ const subjectMap = {
   reading: { name: '閱讀 Reading', class: 'bg-emerald-500/10 text-emerald-500' },
   speaking: { name: '口語 Speaking', class: 'bg-amber-500/10 text-amber-500' }
 };
+
 // -------------------------------------------------------------
 // 3. Firestore 雲端同步 Helper 函式
 // -------------------------------------------------------------
@@ -103,10 +106,9 @@ const subjectMap = {
 // 從 Firestore 載入所有卡片
 async function fetchCardsFromCloud() {
   try {
-    // 新的寫法：指向 users/各自的UID/cards
-if (!currentUserUID) return;
-const cardsRef = collection(db, 'users', currentUserUID, 'cards');
-const querySnapshot = await getDocs(cardsRef);
+    if (!currentUserUID) return;
+    const cardsRef = collection(db, 'users', currentUserUID, 'cards');
+    const querySnapshot = await getDocs(cardsRef);
     const cloudCards = [];
     querySnapshot.forEach((docSnap) => {
       cloudCards.push({ id: docSnap.id, ...docSnap.data() });
@@ -130,7 +132,8 @@ const querySnapshot = await getDocs(cardsRef);
 // 儲存/更新單張卡片至雲端
 async function syncCardToCloud(card) {
   try {
-    await setDoc(doc(db, CARDS_COLLECTION, String(card.id)), card, { merge: true });
+    if (!currentUserUID) return;
+    await setDoc(doc(db, 'users', currentUserUID, 'cards', String(card.id)), card, { merge: true });
   } catch (err) {
     console.error('⚠️ 儲存至 Firebase 失敗:', err);
   }
@@ -139,9 +142,9 @@ async function syncCardToCloud(card) {
 // 刪除雲端單張卡片
 async function deleteCardFromCloud(cardId) {
   try {
-   try {
+    if (!currentUserUID) return;
     await deleteDoc(doc(db, 'users', currentUserUID, 'cards', String(cardId)));
-} catch (err) {
+    console.log(`☁️ 成功從雲端刪除卡片 ${cardId}`);
   } catch (err) {
     console.error('⚠️ 從 Firebase 刪除失敗:', err);
   }
@@ -150,9 +153,10 @@ async function deleteCardFromCloud(cardId) {
 // 批次上傳卡片 (用於 AI 匯入時)
 async function uploadAllCardsToCloud(cardsList) {
   try {
+    if (!currentUserUID) return;
     const batch = writeBatch(db);
     cardsList.forEach(c => {
-      const cardRef = doc(db, CARDS_COLLECTION, String(c.id));
+      const cardRef = doc(db, 'users', currentUserUID, 'cards', String(c.id));
       batch.set(cardRef, c, { merge: true });
     });
     await batch.commit();
