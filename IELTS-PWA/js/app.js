@@ -1,7 +1,38 @@
 import { getCards, saveCards, exportData, STORAGE_KEY } from './storage.js';
 import { speakText } from './speech.js';
 
-// 全局狀態變數
+// -------------------------------------------------------------
+// 1. 引入 Firebase SDK 並初始化
+// -------------------------------------------------------------
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { 
+  getFirestore, 
+  collection, 
+  getDocs, 
+  doc, 
+  setDoc, 
+  deleteDoc, 
+  writeBatch 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBEDhorQluZMJbE9KsApQja4MMW_K665CM",
+  authDomain: "ielts-pwa.firebaseapp.com",
+  projectId: "ielts-pwa",
+  storageBucket: "ielts-pwa.firebasestorage.app",
+  messagingSenderId: "378105720242",
+  appId: "1:378105720242:web:ed712373f28d7ba8cf08ab",
+  measurementId: "G-J6HRLGHLC1"
+};
+
+// 初始化 Firebase 與 Firestore
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const CARDS_COLLECTION = 'cards';
+
+// -------------------------------------------------------------
+// 2. 全局狀態變數
+// -------------------------------------------------------------
 let cards = getCards();
 let currentReviewList = [];
 let reviewIndex = 0;
@@ -17,7 +48,77 @@ const subjectMap = {
   speaking: { name: '口語 Speaking', class: 'bg-amber-500/10 text-amber-500' }
 };
 
-// 初始化
+// -------------------------------------------------------------
+// 3. Firestore 雲端同步 Helper 函式
+// -------------------------------------------------------------
+
+// 從 Firestore 載入所有卡片
+async function fetchCardsFromCloud() {
+  try {
+    const querySnapshot = await getDocs(collection(db, CARDS_COLLECTION));
+    const cloudCards = [];
+    querySnapshot.forEach((docSnap) => {
+      cloudCards.push({ id: docSnap.id, ...docSnap.data() });
+    });
+
+    if (cloudCards.length > 0) {
+      cards = cloudCards;
+      saveCards(cards); // 順便寫入 localStorage 做離線快取
+      refreshCurrentPageUI();
+      console.log(`☁️ 成功從雲端同步 ${cloudCards.length} 張卡片！`);
+    } else if (cards.length > 0) {
+      // 雲端是空的，但本地有卡片，自動批次上傳
+      console.log('☁️ 雲端尚無資料，正將本地卡片同步至 Firestore...');
+      await uploadAllCardsToCloud(cards);
+    }
+  } catch (err) {
+    console.error('⚠️ 讀取 Firestore 失敗，切換為本地模式:', err);
+  }
+}
+
+// 儲存/更新單張卡片至雲端
+async function syncCardToCloud(card) {
+  try {
+    await setDoc(doc(db, CARDS_COLLECTION, String(card.id)), card, { merge: true });
+  } catch (err) {
+    console.error('⚠️ 儲存至 Firebase 失敗:', err);
+  }
+}
+
+// 刪除雲端單張卡片
+async function deleteCardFromCloud(cardId) {
+  try {
+    await deleteDoc(doc(db, CARDS_COLLECTION, String(cardId)));
+  } catch (err) {
+    console.error('⚠️ 從 Firebase 刪除失敗:', err);
+  }
+}
+
+// 批次上傳卡片 (用於 AI 匯入時)
+async function uploadAllCardsToCloud(cardsList) {
+  try {
+    const batch = writeBatch(db);
+    cardsList.forEach(c => {
+      const cardRef = doc(db, CARDS_COLLECTION, String(c.id));
+      batch.set(cardRef, c, { merge: true });
+    });
+    await batch.commit();
+    console.log('☁️ 批次上傳完成！');
+  } catch (err) {
+    console.error('⚠️ 批次同步失敗:', err);
+  }
+}
+
+// 重新整理當前顯示畫面
+function refreshCurrentPageUI() {
+  renderHub();
+  renderAnalytics();
+  renderDatabase();
+}
+
+// -------------------------------------------------------------
+// 4. 初始化
+// -------------------------------------------------------------
 window.addEventListener('DOMContentLoaded', () => {
   cards = getCards();
   renderHub();
@@ -25,6 +126,9 @@ window.addEventListener('DOMContentLoaded', () => {
   renderDatabase();
   initCardGestures();
   if (window.lucide) window.lucide.createIcons();
+
+  // 開始雲端同步
+  fetchCardsFromCloud();
   
   // 綁定全域 window 供 HTML 事件調用
   window.switchPage = switchPage;
@@ -231,7 +335,7 @@ function toggleCardOrder() {
       const remaining = currentReviewList.slice(reviewIndex + 1).sort(() => Math.random() - 0.5);
       currentReviewList = [currentCard, ...remaining];
     } else {
-      const remaining = currentReviewList.slice(reviewIndex + 1).sort((a,b) => a.id.localeCompare(b.id));
+      const remaining = currentReviewList.slice(reviewIndex + 1).sort((a,b) => String(a.id).localeCompare(String(b.id)));
       currentReviewList = [currentCard, ...remaining];
     }
     reviewIndex = 0;
@@ -321,9 +425,11 @@ function nextReviewCard() {
     card.nextReview = nextDate.toISOString().split('T')[0];
     
     cards = getCards();
-    const idx = cards.findIndex(c => c.id === card.id);
+    const idx = cards.findIndex(c => String(c.id) === String(card.id));
     if (idx !== -1) cards[idx] = card;
+    
     saveCards(cards);
+    syncCardToCloud(card); // 🔥 同步複習紀錄到雲端
   }
 
   reviewIndex++;
@@ -483,8 +589,9 @@ function renderDatabase() {
 
 function deleteCard(id) {
   if (confirm('確定要刪除這張卡片嗎？')) {
-    cards = getCards().filter(c => c.id !== id);
+    cards = getCards().filter(c => String(c.id) !== String(id));
     saveCards(cards);
+    deleteCardFromCloud(id); // 🔥 同步從雲端刪除
     renderDatabase();
     renderHub();
   }
@@ -519,7 +626,7 @@ function processAIImport() {
     
     const today = new Date().toISOString().split('T')[0];
     const formatted = imported.map((item, idx) => ({
-      id: Date.now() + '_' + idx,
+      id: String(Date.now() + '_' + idx),
       subject: item.subject || 'reading',
       c: item.c || 'C18',
       t: item.t || 'T1',
@@ -533,7 +640,9 @@ function processAIImport() {
 
     cards = [...getCards(), ...formatted];
     saveCards(cards);
-    alert(`成功匯入 ${formatted.length} 張卡片！`);
+    uploadAllCardsToCloud(formatted); // 🔥 批次上傳新卡片到雲端
+
+    alert(`成功匯入 ${formatted.length} 張卡片並同步到雲端！`);
     closeAIModal();
     renderHub();
     renderDatabase();
@@ -545,7 +654,7 @@ function processAIImport() {
 function saveManualCard() {
   const today = new Date().toISOString().split('T')[0];
   const newCard = {
-    id: Date.now().toString(),
+    id: String(Date.now()),
     subject: document.getElementById('add-subject').value,
     c: document.getElementById('add-c').value || 'C18',
     t: document.getElementById('add-t').value || 'T1',
@@ -565,6 +674,8 @@ function saveManualCard() {
   cards = getCards();
   cards.push(newCard);
   saveCards(cards);
+  syncCardToCloud(newCard); // 🔥 新增卡片同步至雲端
+
   closeAddModal();
   renderHub();
   renderDatabase();
