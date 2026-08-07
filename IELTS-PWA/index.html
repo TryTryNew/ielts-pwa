@@ -246,9 +246,9 @@
         <div class="flex items-center gap-2">
           <!-- 順序 / 亂序 切換按鈕 -->
           <button onclick="toggleCardOrder()" id="review-order-btn" class="px-2.5 py-1 rounded-lg border border-gray-500/30 bg-gray-500/10 text-themeSub text-[11px] font-bold flex items-center justify-center gap-1 hover:border-indigo-500 transition-all">
-            <i data-lucide="arrow-down-1-2" class="w-3.5 h-3.5"></i>
-            <span>順序</span>
-          </button>
+  <i data-lucide="list-ordered" class="w-3.5 h-3.5 text-indigo-400"></i>
+  <span>順序</span>
+</button>
 
           <!-- 模式切換：⚡ 測驗 vs 📖 刷題速覽 -->
           <button onclick="toggleReviewMode()" id="review-mode-btn" class="px-3 py-1 rounded-lg border border-indigo-500/40 bg-indigo-500/10 text-indigo-500 text-[11px] font-bold flex items-center gap-1 transition-all">
@@ -294,7 +294,12 @@
         </div>
       </div>
 
-      <p class="text-[11px] text-themeSub">💡 提示：左/右半邊點擊直覺操作，亦支援上下滑動切換卡片。</p>
+      <div class="flex justify-center mt-3">
+  <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md shadow-lg text-[11px] text-slate-400">
+    <i data-lucide="lightbulb" class="w-3.5 h-3.5 text-amber-400"></i>
+    <span>左右點擊直覺翻頁 ‧ 支援上下滑動切換</span>
+  </div>
+</div>
     </section>
 
     <!-- 3. 📈 記憶曲線 -->
