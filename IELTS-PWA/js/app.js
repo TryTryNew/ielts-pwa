@@ -18,7 +18,9 @@ import {
   getAuth, 
   signInWithEmailAndPassword, 
   signInAnonymously, 
-  onAuthStateChanged 
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -35,7 +37,19 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+// 初始化 Google 登入驗證器
+const googleProvider = new GoogleAuthProvider();
 
+// 監聽按鈕：點擊時跳出 Google 登入視窗
+document.getElementById('googleLoginBtn')?.addEventListener('click', async () => {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    console.log("🟢 成功登入 Google 帳號：", result.user.displayName);
+  } catch (error) {
+    console.error("🔴 Google 登入失敗：", error);
+    alert("登入失敗：" + error.message);
+  }
+});
 let currentUserUID = null;
 
 // 自動驗證身份邏輯
