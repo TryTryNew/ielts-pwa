@@ -67,6 +67,7 @@ onAuthStateChanged(auth, async (user) => {
 // -------------------------------------------------------------
 // 2. 全局狀態變數
 // -------------------------------------------------------------
+const CARDS_COLLECTION = 'cards';
 let cards = getCards();
 let currentReviewList = [];
 let reviewIndex = 0;
