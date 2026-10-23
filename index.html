@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="theme-dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>IELTS 錯題與記憶卡片戰情室</title>
+
+  <!-- PWA Manifest & Theme -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0B0F19" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            themeBg: 'var(--bg-main)',
+            themeCard: 'var(--bg-card)',
+            themeBorder: 'var(--border-card)',
+            themeText: 'var(--text-main)',
+            themeSub: 'var(--text-sub)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    .theme-dark {
+      --bg-main: #0B0F19;
+      --bg-card: #111827;
+      --bg-subcard: rgba(0, 0, 0, 0.25);
+      --border-card: rgba(255, 255, 255, 0.12);
+      --text-main: #F9FAFB;
+      --text-sub: #9CA3AF;
+      --glow: rgba(99, 102, 241, 0.25);
+      --input-bg: rgba(0, 0, 0, 0.3);
+    }
+    
+    .theme-pastel {
+      --bg-main: #FFFFFF;
+      --bg-card: #FFFFFF;
+      --bg-subcard: #F9FAFB;
+      --border-card: #E5E7EB;
+      --text-main: #111827;
+      --text-sub: #4B5563;
+      --glow: rgba(79, 70, 229, 0.08);
+      --input-bg: #F3F4F6;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      transition: background-color 0.3s, color 0.3s;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .glass-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 20px var(--glow);
+    }
+
+    .glass-subcard {
+      background: var(--bg-subcard);
+      border: 1px solid var(--border-card);
+    }
+
+    .perspective-1000 { perspective: 1000px; }
+    .transform-style-3d { transform-style: preserve-3d; }
+    .backface-hidden { -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+    .rotate-y-180 { transform: rotateY(180deg); }
+
+    .hl-blue { color: #3B82F6; font-weight: bold; }
+    .hl-green { color: #10B981; font-weight: bold; }
+    .hl-amber { color: #F59E0B; font-weight: bold; }
+    .hl-purple { color: #8B5CF6; font-weight: bold; }
+  </style>
+
+  <script>
+    // 註冊 Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('PWA Service Worker 註冊成功！', reg))
+          .catch(err => console.log('Service Worker 註冊失敗：', err));
+      });
+    }
+  </script>
+</head>
+<body class="flex flex-col min-h-screen pb-24">
+
+  <!-- 頂部 Header -->
+ <!-- 頂部 Header -->
+  <header class="glass-card sticky top-0 z-40 border-b px-4 py-3">
+    <div class="max-w-4xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-2 cursor-pointer" onclick="switchPage('hub')">
+        <i data-lucide="brain-circuit" class="w-6 h-6 text-indigo-500"></i>
+        <h1 class="text-base md:text-lg font-extrabold tracking-tight">IELTS 記憶戰情室</h1>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <!-- 🌟 新增的 Google 登入同步按鈕 -->
+        <button id="googleLoginBtn" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-themeText font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.18v3.14C3.15 21.36 7.22 24 12 24z"/>
+            <path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.62H1.18C.43 8.12 0 9.81 0 12s.43 3.88 1.18 5.38l4.09-3.14z"/>
+            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.22 0 3.15 2.64 1.18 6.62l4.09 3.14c.95-2.85 3.6-4.91 6.73-4.91z"/>
+          </svg>
+          <span class="hidden sm:inline">Google 同步</span>
+        </button>
+
+        <button onclick="openAIModal()" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold text-xs flex items-center gap-1 shadow-md shadow-indigo-500/20">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> AI 匯入
+        </button>
+        <button onclick="exportData()" class="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 hover:bg-emerald-500/20" title="備份 JSON">
+          <i data-lucide="download" class="w-4 h-4"></i>
+        </button>
+        <button onclick="toggleTheme()" class="p-2 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/30 hover:bg-amber-500/20" title="切換主題">
+          <i data-lucide="sun-moon" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主要內容顯示區 -->
+  <main class="flex-1 max-w-4xl w-full mx-auto p-4 md:p-6 space-y-6">
+
+    <!-- 1. 🏠 總覽 (Hub) -->
+    <section id="page-hub" class="space-y-6">
+      <div class="glass-card p-5 rounded-2xl space-y-2">
+        <div class="flex justify-between items-center text-xs font-bold">
+          <span class="text-themeSub flex items-center gap-1.5">
+            <i data-lucide="target" class="w-4 h-4 text-indigo-500"></i> 今日複習目標達成率
+          </span>
+          <span id="hub-progress-pct" class="text-indigo-500">0%</span>
+        </div>
+        <div class="w-full glass-subcard h-3 rounded-full overflow-hidden">
+          <div id="hub-progress-bar" class="bg-gradient-to-r from-indigo-500 to-emerald-400 h-full w-0 transition-all duration-500"></div>
+        </div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-6 relative overflow-hidden">
+        <div class="relative z-10 space-y-2">
+          <h2 class="text-xl font-bold">歡迎回到雅思記憶戰情室 🎯</h2>
+          <p class="text-xs text-themeSub">專為 C / T / P 考題設計的零干擾大字體複習系統。</p>
+          <div class="pt-3 flex flex-wrap gap-3">
+            <button onclick="startReview('due')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-3 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-600/30">
+              <i data-lucide="play" class="w-4 h-4"></i> 開始今日待複習 (<span id="hub-due-count">0</span>)
+            </button>
+            <button onclick="startReview('all')" class="glass-card px-5 py-3 rounded-xl font-bold text-xs hover:border-indigo-500 flex items-center gap-2">
+              <i data-lucide="shuffle" class="w-4 h-4 text-indigo-500"></i> 全庫隨機複習
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <h3 class="text-xs font-bold text-themeSub uppercase tracking-wider flex items-center gap-1.5">
+          <i data-lucide="layers" class="w-4 h-4 text-indigo-500"></i> 科目單元快速複習
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button onclick="openSubjectView('listening')" class="glass-card p-5 rounded-2xl flex items-center justify-between hover:border-blue-500 transition-all text-left">
+            <div class="flex items-center gap-4">
+              <div class="p-3 bg-blue-500/10 text-blue-500 rounded-xl"><i data-lucide="headphones" class="w-6 h-6"></i></div>
+              <div>
+                <h4 class="font-bold text-sm">🎧 聽力卡片庫 (Listening)</h4>
+                <p class="text-[11px] text-themeSub mt-0.5">按 Test / Part 分組收合選單</p>
+              </div>
+            </div>
+            <i data-lucide="chevron-right" class="w-5 h-5 text-themeSub"></i>
+          </button>
+
+          <button onclick="openSubjectView('reading')" class="glass-card p-5 rounded-2xl flex items-center justify-between hover:border-emerald-500 transition-all text-left">
+            <div class="flex items-center gap-4">
+              <div class="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl"><i data-lucide="book-open" class="w-6 h-6"></i></div>
+              <div>
+                <h4 class="font-bold text-sm">📖 閱讀卡片庫 (Reading)</h4>
+                <p class="text-[11px] text-themeSub mt-0.5">按 Test / Passage 分組收合選單</p>
+              </div>
+            </div>
+            <i data-lucide="chevron-right" class="w-5 h-5 text-themeSub"></i>
+          </button>
+
+          <button onclick="openSubjectView('writing')" class="glass-card p-5 rounded-2xl flex items-center justify-between hover:border-indigo-500 transition-all text-left">
+            <div class="flex items-center gap-4">
+              <div class="p-3 bg-indigo-500/10 text-indigo-500 rounded-xl"><i data-lucide="pen-tool" class="w-6 h-6"></i></div>
+              <div>
+                <h4 class="font-bold text-sm">✍️ 寫作卡片庫 (Task 1 & 2)</h4>
+                <p class="text-[11px] text-themeSub mt-0.5">按 Task / 題型分組收合選單</p>
+              </div>
+            </div>
+            <i data-lucide="chevron-right" class="w-5 h-5 text-themeSub"></i>
+          </button>
+
+          <button onclick="openSubjectView('speaking')" class="glass-card p-5 rounded-2xl flex items-center justify-between hover:border-amber-500 transition-all text-left">
+            <div class="flex items-center gap-4">
+              <div class="p-3 bg-amber-500/10 text-amber-500 rounded-xl"><i data-lucide="mic" class="w-6 h-6"></i></div>
+              <div>
+                <h4 class="font-bold text-sm">🗣️ 口語卡片庫 (Speaking)</h4>
+                <p class="text-[11px] text-themeSub mt-0.5">按 Part 1 / 2 / 3 分組收合選單</p>
+              </div>
+            </div>
+            <i data-lucide="chevron-right" class="w-5 h-5 text-themeSub"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="glass-card p-5 rounded-2xl space-y-3">
+        <h3 class="text-xs font-bold text-themeSub uppercase tracking-wider flex items-center gap-1.5">
+          <i data-lucide="history" class="w-4 h-4 text-indigo-500"></i> 快速捷徑與基本統計
+        </h3>
+        <div class="grid grid-cols-3 gap-3 text-center">
+          <div class="p-3 rounded-xl glass-subcard">
+            <div class="text-[10px] text-themeSub">全庫總卡片</div>
+            <div id="stat-total" class="text-base font-extrabold mt-1">0</div>
+          </div>
+          <div class="p-3 rounded-xl glass-subcard">
+            <div class="text-[10px] text-themeSub">已精通卡片</div>
+            <div id="stat-mastered" class="text-base font-extrabold text-emerald-500 mt-1">0</div>
+          </div>
+          <div class="p-3 rounded-xl glass-subcard">
+            <div class="text-[10px] text-themeSub">今日已複習</div>
+            <div id="stat-reviewed-today" class="text-base font-extrabold text-indigo-500 mt-1">0</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 科目 Test 分組詳細頁面 -->
+    <section id="page-subject-detail" class="hidden space-y-6">
+      <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
+        <button onclick="switchPage('hub')" class="glass-card px-3 py-1.5 rounded-xl text-xs font-bold hover:border-indigo-500 flex items-center gap-1">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回總覽
+        </button>
+        <h2 id="subj-detail-title" class="text-base font-extrabold flex items-center gap-2"></h2>
+      </div>
+      <div id="test-accordion-container" class="space-y-4"></div>
+    </section>
+
+    <!-- 2. ⚡ 沉浸複習 -->
+    <section id="page-review" class="hidden flex flex-col items-center justify-center min-h-[70vh] space-y-4">
+      
+      <!-- 頂部資訊列 & 模式/排序切換按鈕 -->
+      <div class="w-full max-w-xl flex flex-wrap justify-between items-center text-xs px-2 gap-2">
+        <span id="review-tag-badge" class="font-bold px-2.5 py-1 rounded-md bg-indigo-500/10 text-indigo-500">C18-T1-P1</span>
+        
+        <div class="flex items-center gap-2">
+          <!-- 順序 / 亂序 切換按鈕 -->
+          <button onclick="toggleCardOrder()" id="review-order-btn" class="px-2.5 py-1 rounded-lg border border-gray-500/30 bg-gray-500/10 text-themeSub text-[11px] font-bold flex items-center justify-center gap-1 hover:border-indigo-500 transition-all">
+  <i data-lucide="list-ordered" class="w-3.5 h-3.5 text-indigo-400"></i>
+  <span>順序</span>
+</button>
+
+          <!-- 模式切換：⚡ 測驗 vs 📖 刷題速覽 -->
+          <button onclick="toggleReviewMode()" id="review-mode-btn" class="px-3 py-1 rounded-lg border border-indigo-500/40 bg-indigo-500/10 text-indigo-500 text-[11px] font-bold flex items-center gap-1 transition-all">
+            <i data-lucide="zap" class="w-3.5 h-3.5"></i> ⚡ 測驗 (點擊翻面)
+          </button>
+        </div>
+
+        <span id="review-progress-text" class="font-bold text-themeSub">卡片 1 / 10</span>
+      </div>
+
+      <!-- 3D 卡片容器 -->
+      <div id="review-card-box" class="perspective-1000 w-full max-w-xl h-[420px] cursor-pointer relative select-none">
+        <div id="review-card-inner" class="relative w-full h-full transform-style-3d transition-transform duration-500">
+          
+          <!-- 正面 -->
+          <div class="absolute inset-0 backface-hidden glass-card rounded-3xl p-8 flex flex-col justify-between items-center text-center">
+            <div class="w-full flex justify-between items-center">
+              <span class="text-[10px] uppercase font-extrabold text-indigo-500 tracking-widest">QUESTION / PROMPT</span>
+              <button onclick="event.stopPropagation(); speakCurrentCardFront()" class="p-2 rounded-full bg-indigo-500/10 text-indigo-500 hover:bg-indigo-500/20" title="朗讀題目/單詞">
+                <i data-lucide="volume-2" class="w-5 h-5"></i>
+              </button>
+            </div>
+            <div id="review-front-text" class="text-2xl md:text-3xl font-extrabold leading-snug tracking-wide max-h-64 overflow-y-auto my-auto"></div>
+            <div id="review-front-tip" class="text-[11px] text-themeSub flex items-center gap-1">
+              👈 點左邊上一張 ｜ 點右邊翻面 👉
+            </div>
+          </div>
+
+          <!-- 背面 -->
+          <div class="absolute inset-0 backface-hidden rotate-y-180 glass-card rounded-3xl p-8 flex flex-col justify-between items-start text-left border-indigo-500/40">
+            <div class="w-full flex justify-between items-center">
+              <span class="text-[10px] uppercase font-extrabold text-emerald-500 tracking-widest">ANALYSIS & PARAPHRASE</span>
+              <button onclick="event.stopPropagation(); speakCurrentCardBack()" class="p-2 rounded-full bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20" title="朗讀解析/例句">
+                <i data-lucide="volume-2" class="w-5 h-5"></i>
+              </button>
+            </div>
+            <div id="review-back-text" class="text-base md:text-lg font-medium leading-relaxed max-h-64 overflow-y-auto my-auto w-full whitespace-pre-wrap space-y-2"></div>
+            <div id="review-back-tip" class="text-[11px] text-indigo-500 w-full text-center flex items-center justify-center gap-1">
+              👈 點左邊上一張 ｜ 點右邊下一張 👉
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="flex justify-center mt-3">
+  <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md shadow-lg text-[11px] text-slate-400">
+    <i data-lucide="lightbulb" class="w-3.5 h-3.5 text-amber-400"></i>
+    <span>左右點擊直覺翻頁 ‧ 支援上下滑動切換</span>
+  </div>
+</div>
+    </section>
+
+    <!-- 3. 📈 記憶曲線 -->
+    <section id="page-analytics" class="hidden space-y-6">
+      <div class="glass-card p-6 rounded-2xl space-y-3">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-themeSub flex items-center gap-1.5">
+            <i data-lucide="target" class="w-4 h-4 text-indigo-500"></i> 今日複習達成率
+          </span>
+          <span id="analytics-progress-pct" class="text-sm font-extrabold text-indigo-500">0%</span>
+        </div>
+        <div class="w-full glass-subcard h-3.5 rounded-full overflow-hidden">
+          <div id="analytics-progress-bar" class="bg-gradient-to-r from-indigo-500 to-emerald-400 h-full w-0 transition-all duration-500"></div>
+        </div>
+        <p id="analytics-due-desc" class="text-xs text-themeSub pt-1">今日待複習：0 張卡片</p>
+      </div>
+
+      <div class="glass-card p-6 rounded-2xl space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="text-sm font-bold flex items-center gap-2">
+            <i data-lucide="calendar-days" class="w-4 h-4 text-indigo-500"></i> 記憶曲線月曆時間表
+          </h3>
+          <span id="calendar-month-name" class="text-xs font-bold text-themeSub"></span>
+        </div>
+        <div class="grid grid-cols-7 gap-2 text-center text-xs font-bold text-themeSub pb-2 border-b border-gray-200 dark:border-gray-800">
+          <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+        </div>
+        <div id="calendar-grid" class="grid grid-cols-7 gap-2"></div>
+      </div>
+    </section>
+
+    <!-- 4. 🗄️ 卡片庫 -->
+    <section id="page-database" class="hidden space-y-6">
+      <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-800 pb-3">
+        <h2 class="text-base font-extrabold flex items-center gap-2">
+          <i data-lucide="database" class="w-5 h-5 text-indigo-500"></i> 卡片庫 (Data Bank)
+        </h2>
+        <button onclick="openManualAddModal()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1">
+          <i data-lucide="plus" class="w-4 h-4"></i> 新增卡片
+        </button>
+      </div>
+
+      <div class="flex gap-2">
+        <input type="text" id="db-search-input" oninput="renderDatabase()" placeholder="搜尋關鍵字、C18、T1..." class="flex-1 glass-subcard rounded-xl px-4 py-2 text-xs text-themeText focus:outline-none focus:border-indigo-500" />
+      </div>
+
+      <div id="db-card-list" class="space-y-3"></div>
+    </section>
+
+  </main>
+
+  <!-- Modals -->
+  <div id="calendar-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="glass-card rounded-2xl max-w-lg w-full p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-800 pb-3">
+        <h3 id="cal-modal-date-title" class="text-base font-bold flex items-center gap-2 text-indigo-500"></h3>
+        <button onclick="closeCalModal()" class="text-themeSub hover:text-themeText"><i data-lucide="x"></i></button>
+      </div>
+      <div id="cal-modal-card-list" class="space-y-3 max-h-80 overflow-y-auto"></div>
+      <div class="flex justify-end pt-2 border-t border-gray-200 dark:border-gray-800">
+        <button onclick="closeCalModal()" class="bg-indigo-600 hover:bg-indigo-500 px-5 py-2 rounded-xl text-xs font-bold text-white">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="ai-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="glass-card rounded-2xl max-w-xl w-full p-6 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-base font-bold flex items-center gap-2">
+          <i data-lucide="sparkles" class="text-indigo-500"></i> AI 錯題 / 句型 JSON 批次匯入
+        </h3>
+        <button onclick="closeAIModal()" class="text-themeSub hover:text-themeText"><i data-lucide="x"></i></button>
+      </div>
+      <textarea id="ai-json-input" rows="8" class="w-full glass-subcard rounded-xl p-3 text-xs font-mono text-emerald-500 focus:outline-none focus:border-indigo-500" placeholder='[
+  {
+    "subject": "writing_p1",
+    "c": "C18",
+    "t": "T1",
+    "p": "P1",
+    "front": "【開頭段】雙圖/多圖通用句型",
+    "back": "The line charts delineate <span class=\"hl-blue\">[主題A]</span> alongside <span class=\"hl-green\">[主題B]</span>.\n\n<span class=\"hl-amber\">Key:</span> delineate 可替換 show。"
+  }
+]'></textarea>
+      <div class="flex justify-between items-center">
+        <button onclick="copyAIPrompt()" class="text-xs text-indigo-500 hover:underline flex items-center gap-1">
+          <i data-lucide="copy" class="w-3 h-3"></i> 複製 AI Prompt 範本
+        </button>
+        <button onclick="processAIImport()" class="bg-indigo-600 hover:bg-indigo-500 px-5 py-2 rounded-xl text-xs font-bold text-white">
+          開始匯入
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="add-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="glass-card rounded-2xl max-w-lg w-full p-6 space-y-4">
+      <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-800 pb-2">
+        <h3 class="text-base font-bold">手動新增卡片</h3>
+        <button onclick="closeAddModal()" class="text-themeSub hover:text-themeText"><i data-lucide="x"></i></button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-themeSub mb-1">科目 (Subject)</label>
+          <select id="add-subject" class="w-full glass-subcard rounded-xl p-2.5 text-themeText">
+            <option value="listening">🎧 聽力 (Listening)</option>
+            <option value="reading">📖 閱讀 (Reading)</option>
+            <option value="writing_p1">✍️ 寫作 Task 1</option>
+            <option value="writing_p2">✍️ 寫作 Task 2</option>
+            <option value="speaking">🗣️ 口語 (Speaking)</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block text-themeSub mb-1">C (冊數)</label>
+            <input type="text" id="add-c" placeholder="C18" class="w-full glass-subcard rounded-xl p-2 text-themeText" />
+          </div>
+          <div>
+            <label class="block text-themeSub mb-1">T (Test)</label>
+            <input type="text" id="add-t" placeholder="T1" class="w-full glass-subcard rounded-xl p-2 text-themeText" />
+          </div>
+          <div>
+            <label class="block text-themeSub mb-1">P (Passage/Part)</label>
+            <input type="text" id="add-p" placeholder="P1" class="w-full glass-subcard rounded-xl p-2 text-themeText" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-themeSub mb-1">正面 (題目/詞彙)</label>
+          <input type="text" id="add-front" placeholder="請輸入正面內容" class="w-full glass-subcard rounded-xl p-2.5 text-themeText" />
+        </div>
+        <div>
+          <label class="block text-themeSub mb-1">背面 (解析/同義替換)</label>
+          <textarea id="add-back" rows="4" placeholder="請輸入背面解析內容 (支援 HTML 彩字標籤)" class="w-full glass-subcard rounded-xl p-2.5 text-themeText"></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-800">
+        <button onclick="closeAddModal()" class="px-4 py-2 rounded-xl text-xs text-themeSub">取消</button>
+        <button onclick="saveManualCard()" class="bg-indigo-600 hover:bg-indigo-500 px-5 py-2 rounded-xl text-xs font-bold text-white">儲存卡片</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <footer class="fixed bottom-0 left-0 right-0 glass-card border-t border-gray-200 dark:border-gray-800 z-40 py-2.5 px-6">
+    <div class="max-w-md mx-auto flex justify-around items-center">
+      <button onclick="switchPage('hub')" id="bnav-hub" class="flex flex-col items-center gap-1 text-indigo-500 font-bold">
+        <i data-lucide="home" class="w-5 h-5"></i>
+        <span class="text-[10px]">總覽</span>
+      </button>
+      <button onclick="switchPage('review')" id="bnav-review" class="flex flex-col items-center gap-1 text-themeSub hover:text-themeText font-bold">
+        <i data-lucide="zap" class="w-5 h-5"></i>
+        <span class="text-[10px]">沉浸複習</span>
+      </button>
+      <button onclick="switchPage('analytics')" id="bnav-analytics" class="flex flex-col items-center gap-1 text-themeSub hover:text-themeText font-bold">
+        <i data-lucide="line-chart" class="w-5 h-5"></i>
+        <span class="text-[10px]">記憶曲線</span>
+      </button>
+      <button onclick="switchPage('database')" id="bnav-database" class="flex flex-col items-center gap-1 text-themeSub hover:text-themeText font-bold">
+        <i data-lucide="database" class="w-5 h-5"></i>
+        <span class="text-[10px]">卡片庫</span>
+      </button>
+    </div>
+  </footer>
+
+  <!-- 載入主程式模組 -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
