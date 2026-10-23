@@ -1,17 +1,30 @@
-// v3：網路優先，斷網才用快取（這樣線上行為跟沒有 Service Worker 時一樣）
+// v4：網路優先，斷網才用快取（這樣線上行為跟沒有 Service Worker 時一樣）
+// v4 變更：app.js 拆成多個模組，離線名單改成列出所有新檔案。
+// 提醒：名單上只要有一個檔案抓不到，整個離線快取就裝不起來，所以名單必須和實際檔案一致。
 // 歷史：v1 用 cache.addAll 一次抓「自己的檔案＋別人網站的檔案」，
 // Tailwind 網站擋掉，整批失敗，Service Worker 作廢，離線就打不開。
-const CACHE_NAME = 'ielts-pwa-v3';
+const CACHE_NAME = 'ielts-pwa-v4';
 
 // 1) 自己網站的檔案：一定要存到。哪一個失敗，錯誤訊息會直接寫出檔名
 const LOCAL_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './js/app.js',
+  './js/main.js',
+  './js/firebase.js',
+  './js/auth.js',
+  './js/cloud.js',
   './js/storage.js',
   './js/speech.js',
-  './js/dates.js'
+  './js/dates.js',
+  './js/srs.js',
+  './js/constants.js',
+  './js/ui/nav.js',
+  './js/ui/hub.js',
+  './js/ui/review.js',
+  './js/ui/analytics.js',
+  './js/ui/database.js',
+  './js/ui/modals.js'
 ];
 
 // 2) 別人網站的檔案：盡量存，存不到就跳過，不拖垮整個安裝
